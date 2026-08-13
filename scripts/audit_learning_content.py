@@ -10,7 +10,17 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 LEARNING = ROOT / "learning"
 SOURCE = ROOT / "content"
-BANNED = ("97kt", "xingkeit", "优质IT", "防断更", "面试", "PDF 原文", "课程图")
+BANNED = (
+    "97kt",
+    "xingkeit",
+    "优质IT",
+    "防断更",
+    "面试",
+    "PDF 原文",
+    "课程图",
+    "邓明",
+    "后端工程师的高阶面经",
+)
 
 
 def main() -> None:
