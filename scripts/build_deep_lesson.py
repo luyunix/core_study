@@ -212,6 +212,17 @@ def source_body(lesson_id: str) -> tuple[int, str]:
     marker = "## PDF 原文"
     if marker in body:
         body = body.split(marker, 1)[1]
+    lesson_number = re.match(r"\d+", lesson_id)
+    if lesson_number:
+        duplicate = re.search(
+            rf"(?m)^###\s+{re.escape(lesson_number.group())}｜([^\n]*)\n",
+            body,
+        )
+        if duplicate:
+            title_fragment = duplicate.group(1).strip()
+            body = body[:duplicate.start()] + body[duplicate.end():]
+            if not re.search(r"[？?。！!]$", title_fragment):
+                body = re.sub(r"(?m)^\s*###\s+[^\n#]{1,12}\n", "", body, count=1)
     return int(pages.group(1)), body
 
 
