@@ -195,6 +195,48 @@ function ServiceDiscoveryWalkthrough() {
   )
 }
 
+function GenericLessonWalkthrough({ lesson }: { lesson: Lesson }) {
+  const stages = ['先看具体场景', ...lesson.walkthroughFlow]
+  const [step, setStep] = useState(0)
+  const action = step === 0 ? '先只辨认对象和数字，不背术语' : lesson.walkthroughFlow[step - 1]
+  const next = step < lesson.walkthroughFlow.length ? lesson.walkthroughFlow[step] : '到达可以核对的终态'
+  const previous = step <= 1 ? '尚未执行机制动作' : lesson.walkthroughFlow[step - 2]
+
+  return (
+    <section className="walkthrough" aria-label={`${lesson.title}零基础逐步推演`}>
+      <div className="walkthrough-head">
+        <div>
+          <span>零基础逐步推演</span>
+          <strong>每次只推进一个状态，再进入长文</strong>
+        </div>
+        <b>{step + 1} / {stages.length}</b>
+      </div>
+      <div className="walkthrough-progress" style={{ gridTemplateColumns: `repeat(${stages.length}, 1fr)` }} aria-hidden="true">
+        {stages.map((_, index) => <i key={index} className={index <= step ? 'active' : ''} />)}
+      </div>
+      <div className="walkthrough-stage">
+        <span className="walkthrough-step-label">第 {step + 1} 步</span>
+        <h2>{stages[step]}</h2>
+        <p>{step === 0 ? lesson.walkthroughExample : `现在只执行“${action}”。先确认这一步留下的结果，再继续。`}</p>
+        <div className="walkthrough-state-grid">
+          <div><small>上一状态</small><strong>{previous}</strong></div>
+          <div><small>当前只做这一件事</small><strong>{action}</strong></div>
+          <div><small>结果交给哪里</small><strong>{next}</strong></div>
+        </div>
+        <aside><span>先预测，再揭晓</span>{lesson.walkthroughQuestion}</aside>
+      </div>
+      <div className="walkthrough-controls">
+        <button onClick={() => setStep(0)} disabled={step === 0}><RotateCcw size={15} /> 重新开始</button>
+        <span />
+        <button onClick={() => setStep((value) => Math.max(0, value - 1))} disabled={step === 0}><ChevronLeft size={16} /> 上一步</button>
+        <button className="primary" onClick={() => setStep((value) => Math.min(stages.length - 1, value + 1))} disabled={step === stages.length - 1}>
+          {step === stages.length - 1 ? '推演完成' : '揭示下一步'} <ChevronRight size={16} />
+        </button>
+      </div>
+    </section>
+  )
+}
+
 function App() {
   const [currentId, setCurrentId] = useState(lessonFromUrl)
   const [edition, setEdition] = useState<Edition>(editionFromUrl)
@@ -207,6 +249,7 @@ function App() {
   const currentIndex = Math.max(0, lessons.findIndex((lesson) => lesson.id === currentId))
   const lesson = lessons[currentIndex]
   const chapterLessons = lessons.filter((item) => item.chapter === lesson.chapter)
+  const rewriteDone = lessons.filter((item) => item.rewriteComplete).length
   const chapterDone = chapterLessons.filter((item) => completed.has(item.id)).length
   const progress = Math.round((completed.size / lessons.length) * 100)
   const previous = lessons[currentIndex - 1]
@@ -331,7 +374,7 @@ function App() {
           <div className="course-summary">
             <span className="eyebrow">核心知识学习路径</span>
             <strong>后端工程核心能力</strong>
-            <small>{lessons.length} 篇独立学习稿 · {chapters.length} 个专题</small>
+            <small>{rewriteDone} / {lessons.length} 篇深度重写完成 · {chapters.length} 个专题</small>
           </div>
           <nav aria-label="课程章节">
             {chapters.map((chapter) => {
@@ -394,6 +437,7 @@ function App() {
           )}
 
           {edition === 'learning' && lesson.id === '01-service-discovery' && <ServiceDiscoveryWalkthrough />}
+          {edition === 'learning' && lesson.id !== '01-service-discovery' && lesson.walkthroughFlow.length > 0 && <GenericLessonWalkthrough key={lesson.id} lesson={lesson} />}
 
           <article
             className={`markdown-body ${edition === 'source' ? 'source-edition' : 'learning-edition'}`}

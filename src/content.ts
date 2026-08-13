@@ -17,6 +17,9 @@ export type Lesson = {
   sourceHeadings: Heading[]
   hasSource: boolean
   rewriteComplete: boolean
+  walkthroughFlow: string[]
+  walkthroughExample: string
+  walkthroughQuestion: string
 }
 
 const learningModules = import.meta.glob('../learning/*.md', {
@@ -130,6 +133,9 @@ export const lessons: Lesson[] = Object.values(learningModules)
       sourceHeadings: sourceRendered.headings,
       hasSource: Boolean(sourceRaw),
       rewriteComplete: data.edition === 'independent-learning-exemplar',
+      walkthroughFlow: (data.walkthrough_flow ?? '').split('|').filter(Boolean),
+      walkthroughExample: data.walkthrough_example ?? '',
+      walkthroughQuestion: data.walkthrough_question ?? '',
     }
   })
   .sort((a, b) => a.order - b.order)

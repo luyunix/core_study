@@ -1,0 +1,328 @@
+#!/usr/bin/env python3
+"""Build one complete, source-covered learning lesson at a time.
+
+The short first-pass notes remain reproducible in ``build_learning_notes.py``.
+This script is the completion path: it combines the lesson-specific editorial
+model with the complete source teaching sequence, while removing source-page
+artifacts, promotional copy, watermark language and interview-only framing.
+"""
+
+from __future__ import annotations
+
+import argparse
+import html
+import re
+from pathlib import Path
+
+from learning_specs import SPECS
+
+
+ROOT = Path(__file__).resolve().parents[1]
+SOURCE_DIR = ROOT / "content"
+OUTPUT_DIR = ROOT / "learning"
+OVERRIDE_DIR = ROOT / "scripts" / "lesson_overrides"
+
+
+HEADING_RENAMES = {
+    "前置知识": "先把机制拆开",
+    "面试准备": "把知识转成可验证的工程判断",
+    "亮点方案": "进一步推导：怎样把机制用进真实系统",
+    "面试思路总结": "本节原始知识线索收束",
+    "课后讨论（PDF 原文）": "补充讨论与边界校准",
+    "思考题": "继续推演",
+}
+
+PHRASE_REWRITES = (
+    ("面试官", "技术评审者"),
+    ("面试者", "学习者"),
+    ("候选者", "学习者"),
+    ("面试题", "工程问题"),
+    ("面试思路", "技术推理路径"),
+    ("面试准备", "工程表达准备"),
+    ("面试", "技术讨论"),
+    ("必考点", "核心知识点"),
+    ("必考", "经常需要解释"),
+    ("必问", "经常需要解释"),
+    ("必面", "经常需要解释"),
+    ("刷出亮点", "给出有证据的判断"),
+    ("亮点", "进阶推导"),
+    ("钓鱼", "预留追问入口"),
+    ("鱼饵", "追问入口"),
+    ("骚操作", "定制化做法"),
+    ("SAO 操作", "定制化做法"),
+    ("答题", "技术说明"),
+    ("回答", "解释"),
+    ("刮目相看", "理解这套推理的价值"),
+)
+
+
+def yaml_string(value: str) -> str:
+    return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+
+def mermaid(flow: list[str]) -> str:
+    nodes = [f'    S{i}["{i}. {label.replace(chr(34), chr(39))}"]' for i, label in enumerate(flow, 1)]
+    links = [f"    S{i} --> S{i + 1}" for i in range(1, len(flow))]
+    return "\n".join([
+        "flowchart TD",
+        *nodes,
+        *links,
+        "    classDef start fill:#e8f1ff,stroke:#2878d0,color:#183153",
+        "    classDef finish fill:#e6f6ef,stroke:#2c8c69,color:#153f33",
+        "    class S1 start",
+        f"    class S{len(flow)} finish",
+    ])
+
+
+def source_body(lesson_id: str) -> tuple[int, str]:
+    path = SOURCE_DIR / f"{lesson_id}.md"
+    raw = path.read_text(encoding="utf-8")
+    pages = re.search(r"^source_pages:\s*(\d+)\s*$", raw, re.MULTILINE)
+    if not pages:
+        raise ValueError(f"{path} 缺少 source_pages")
+    body = re.sub(r"\A---\n[\s\S]*?\n---\n", "", raw)
+    marker = "## PDF 原文"
+    if marker in body:
+        body = body.split(marker, 1)[1]
+    return int(pages.group(1)), body
+
+
+def clean_source_walkthrough(raw: str) -> str:
+    """Keep teaching substance in order while deleting conversion artifacts."""
+
+    lines: list[str] = []
+    skip_editorial_bridge = False
+    for original in raw.splitlines():
+        line = original.strip()
+        if not line:
+            if lines and lines[-1] != "":
+                lines.append("")
+            continue
+        if line.startswith("<!-- source-page:") or re.fullmatch(r"!\[[^]]*]\([^)]*\)", line):
+            continue
+        if "版权归" in line or "防盗追踪" in line or "未经许可" in line:
+            continue
+        if any(token in line for token in ("97kt", "xingkeit", "优质IT", "防断更")):
+            continue
+        if line.startswith("## 学习前补齐"):
+            skip_editorial_bridge = True
+            continue
+        if skip_editorial_bridge:
+            if line == "---":
+                skip_editorial_bridge = False
+            continue
+        if line == "---" or line.startswith("> 课程：") or line.startswith("> 来源："):
+            continue
+        if line.startswith("# "):
+            continue
+        if re.match(r"^(全部留言|最新\s+精选|共\s*\d+\s*条评论)", line):
+            continue
+        if re.match(r"^[^\s]{1,24}\s*20\d{2}-\d{2}-\d{2}\s+来自", line):
+            line = re.sub(r"^[^\s]{1,24}\s*20\d{2}-\d{2}-\d{2}\s+来自[^\s]+", "补充讨论：", line)
+        line = re.sub(r"[]+", "", line)
+        line = re.sub(r"^作者回复\s*:\s*", "讲解补充：", line)
+        line = re.sub(r"^作者回复\s*", "讲解补充：", line)
+        line = re.sub(r"^###\s+(.+)$", lambda m: "### " + HEADING_RENAMES.get(m.group(1), m.group(1)), line)
+        line = re.sub(r"^##\s+(.+)$", lambda m: "### " + HEADING_RENAMES.get(m.group(1), m.group(1)), line)
+        for old, new in PHRASE_REWRITES:
+            line = line.replace(old, new)
+        line = line.replace("大明", "讲解者")
+        line = re.sub(r"^你好，我是讲解者。", "", line)
+        line = line.replace("今天我们来聊一聊", "本节讨论")
+        line = line.replace("今天我们来聊", "本节讨论")
+        line = line.replace("所以今天我就来给你介绍一下", "因此需要继续考察")
+        line = line.replace("下面我先来给你介绍", "下面先介绍")
+        line = line.replace("接下来我带你一个个看", "下面逐一拆解")
+        line = line.replace("你可能想到", "这里首先要考虑")
+        line = line.replace("你可能会觉得", "常见疑问是")
+        line = line.replace("你可能觉得", "常见疑问是")
+        line = line.replace("你可以看到", "由此可以看到")
+        line = line.replace("我前面和你提到过", "前面已经提到")
+        line = line.replace("我前面提到过", "前面已经提到")
+        line = line.replace("我前面提到", "前面提到")
+        line = line.replace("我这里稍微给你解释一下", "这里需要解释")
+        line = line.replace("这里我可以用", "这里可以用")
+        line = line.replace("我们公司", "某个线上系统")
+        line = line.replace("你可以这么说", "可以把方案整理为")
+        line = line.replace("你就可以这样解释", "可以这样解释")
+        line = line.replace("在技术讨论的时候", "在工程复盘时")
+        line = line.replace("技术讨论和汇报晋升", "技术评审")
+        line = line.replace("技术评审者进一步问", "后续继续追问")
+        line = re.sub(r"欢迎你把[^。！!]*[。！!]?$", "", line)
+        line = re.sub(r"我们下节课再见[！!。]?$", "", line)
+        line = re.sub(r"相信[^。]*技术评审者[^。]*[。]?$", "", line)
+        line = re.sub(r"\s+", " ", line).strip()
+        if line:
+            lines.append(line)
+
+    cleaned = "\n".join(lines)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    cleaned = re.sub(r"([^\n。！？；：.!?])\n\n([\u4e00-\u9fff])", r"\1\2", cleaned)
+    cleaned = cleaned.strip()
+    return cleaned
+
+
+def build_deep_note(spec: dict) -> str:
+    pages, raw_source = source_body(spec["id"])
+    walkthrough = clean_source_walkthrough(raw_source)
+    flow = spec["flow"]
+    question, answer = spec["check"]
+    flow_rows = "\n".join(
+        f"| {i} | {item} | {flow[i] if i < len(flow) else '得到可核对的终态'} |"
+        for i, item in enumerate(flow, 1)
+    )
+    evidence_rows = "\n".join(
+        f"| {i} | {item} | 开始时间、结束时间、输入标识、结果状态、异常原因 |"
+        for i, item in enumerate(flow, 1)
+    )
+    arc = "\n".join(f"{i}. {item}" for i, item in enumerate(spec["arc"], 1))
+    first = flow[0]
+    last = flow[-1]
+
+    return f'''---
+id: {yaml_string(spec["id"])}
+order: {spec["order"]}
+chapter: {yaml_string(spec["chapter"])}
+title: {yaml_string(spec["title"])}
+source_note: {yaml_string(f"../content/{spec['id']}.md")}
+source_pages: {pages}
+edition: "independent-learning-exemplar"
+walkthrough_flow: {yaml_string('|'.join(flow))}
+walkthrough_example: {yaml_string(spec["example"])}
+walkthrough_question: {yaml_string(question)}
+---
+
+# {spec["title"]}
+
+> 本课只解决一个问题：{spec["question"]}
+
+这不是原页面的缩写，也不是一组孤立结论。下面先建立一个能推演的最小世界，再把状态、数字和失败分支摊开，最后按来源讲解顺序覆盖全部知识线索。读完后，你应当能从 `{first}` 一直解释到 `{last}`，并说明中途任意一步失败会留下什么状态。
+
+## 零基础入口：先建立本课的心智画面
+
+{spec["bridge"]}
+
+先不要急着记组件名。只抓住四个问题：**现在手里有什么输入？下一步只做什么动作？哪个状态发生变化？变化后的结果交给谁？** 之后遇到新框架，只要这四个答案不变，核心机制就没有变。
+
+### 放进一个足够小、可以手算的世界
+
+{spec["example"]}
+
+这个小世界故意只保留本课必需的对象。生产系统会有更多节点、线程、分片和异常，但数量增加不会改变这里的因果关系。先确认你能手算这个例子，再把数字替换成真实系统数据。
+
+### 先预测，不要马上看结论
+
+**{question}**
+
+先写下自己的判断，并指出你依赖的前提。文末自我检查会揭示答案；如果答案不同，回到下面的状态表找出第一个分叉点。
+
+## 本节精讲：让机制一步一步发生
+
+{spec["mechanism"]}
+
+### 可见状态推进
+
+| 当前步 | 现在发生的动作 | 下一步拿到什么 |
+| ---: | --- | --- |
+{flow_rows}
+
+```mermaid
+{mermaid(flow)}
+```
+
+图只承担一个任务：让你看清状态如何向前移动。它不意味着每一步必然成功；网络超时、进程退出、重复执行和数据竞争都可能让箭头停在中间，因此后面必须继续讨论失效边界。
+
+### 一次带数字的完整推演
+
+{spec["example"]}
+
+数字不是装饰。它迫使我们回答容量、顺序、时间窗口或版本选择问题。若换一个数字就得出不同结论，真正的设计依据就是那个阈值，而不是某个中间件名称。
+
+## 按讲解顺序重建知识链：完整来源讲解
+
+下面按来源资料的教学顺序重新编排完整内容。转换页码、来源图片、推广信息、水印、角色化问答和只服务于技术讨论场景的话术已经删除；机制、算法、例子、反例、事故线索、评论补充和限制条件仍然保留。这里的作用是补齐知识覆盖，不取代前面的独立推演。
+
+{walkthrough}
+
+## 把完整讲解收束成一条因果链
+
+{arc}
+
+把这几步连接起来时，不要省略“为什么”。最终结论只有在前提、状态变化和失败代价都说得清楚时才可靠。
+
+## 误区与失效边界
+
+{spec["boundary"]}
+
+再加一条通用但必须落实到本课对象上的边界：机制只能处理它看得见的信号。若输入指标失真、状态没有持久化、错误被吞掉，或者补偿没有幂等保护，再成熟的框架也只能基于错误证据作决定。
+
+### 三种故障注入方式
+
+| 故障 | 要观察什么 | 不能接受的解释 |
+| --- | --- | --- |
+| 在第 2 步前让依赖超时 | 是否停在可重试状态，是否消耗完上游预算 | “框架稍后会处理” |
+| 在状态写入后让进程退出 | 重启后能否识别已完成与待继续动作 | “再执行一次应该没事” |
+| 对同一输入并发执行两次 | 是否出现重复副作用、顺序颠倒或覆盖 | “概率很低” |
+
+## 工程验证：把理解变成可以复查的证据
+
+{spec["artifact"]}
+
+| 步骤 | 状态或动作 | 最少应留下的证据 |
+| ---: | --- | --- |
+{evidence_rows}
+
+验证时同时记录成功路径和失败路径。只证明“正常时能跑通”不能说明设计可靠；至少要让一次超时、一次进程退出和一次重复请求可重现，并能根据日志或指标解释最后状态。
+
+## 学完检查：闭卷画出本课
+
+你现在应该能独立完成四件事：
+
+1. 用自己的话说出本课唯一问题，不使用产品名也能解释。
+2. 复算上面的具体例子，并指出哪个输入改变会让结论改变。
+3. 沿 Mermaid 图注入一次失败，预测系统停在哪里以及由谁收敛。
+4. 说出本课机制不保证什么，并给出一个反例。
+
+## 自我检查
+
+<details>
+<summary>{html.escape(question)}</summary>
+
+{answer}
+
+</details>
+
+<details>
+<summary>怎样证明自己不是只记住了名词？</summary>
+
+把 `{first}` 的一个真实输入写出来，逐步记录到 `{last}`。然后在中间任意一步制造失败；如果你能解释当前状态、下一责任方、可观测证据和恢复边界，就已经拥有可以迁移的工程模型。
+
+</details>
+
+## 来源与事实校准
+
+- [查看完整来源稿（本地 {pages} 页资料）](../content/{spec['id']}.md)
+
+来源稿用于核对覆盖范围，不随公开站点发布。产品默认值和具体内部行为可能随版本变化；落地时应使用目标版本的官方文档、可运行实验和故障演练校准。本学习稿中的零基础入口、状态推演、故障矩阵和工程验证属于编辑补充，不冒充来源讲解者的原话。
+'''
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("lesson_id", help="one lesson id, for example 02-load-balancing")
+    args = parser.parse_args()
+    specs = {spec["id"]: spec for spec in SPECS}
+    if args.lesson_id not in specs:
+        raise SystemExit(f"unknown lesson id: {args.lesson_id}")
+
+    spec = specs[args.lesson_id]
+    note = build_deep_note(spec)
+    output = OUTPUT_DIR / f"{args.lesson_id}.md"
+    override = OVERRIDE_DIR / output.name
+    output.write_text(note, encoding="utf-8")
+    override.write_text(note, encoding="utf-8")
+    print(f"built deep lesson {args.lesson_id}: {len(note)} chars, {len(note.splitlines())} lines")
+
+
+if __name__ == "__main__":
+    main()
