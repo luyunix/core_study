@@ -55,6 +55,41 @@ PHRASE_REWRITES = (
     ("刮目相看", "理解这套推理的价值"),
 )
 
+OFFICIAL_REFS = {
+    "02-load-balancing": [
+        ("NGINX · HTTP Load Balancing", "https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/"),
+        ("gRPC · Load Balancing", "https://grpc.io/blog/grpc-load-balancing/"),
+    ],
+    "03-circuit-breaker": [
+        ("Resilience4j · CircuitBreaker", "https://resilience4j.readme.io/docs/circuitbreaker"),
+        ("Resilience4j · Metrics and events", "https://resilience4j.readme.io/docs/getting-started-3"),
+    ],
+    "数据库": [
+        ("MySQL 8.4 Reference Manual", "https://dev.mysql.com/doc/refman/8.4/en/"),
+        ("MySQL 8.4 · InnoDB", "https://dev.mysql.com/doc/refman/8.4/en/innodb-storage-engine.html"),
+    ],
+    "消息队列": [
+        ("Apache Kafka · Documentation", "https://kafka.apache.org/documentation/"),
+        ("Apache Kafka · Design", "https://kafka.apache.org/25/design/design/"),
+    ],
+    "缓存": [
+        ("Redis · Documentation", "https://redis.io/docs/latest/"),
+        ("Redis · Key eviction", "https://redis.io/docs/latest/develop/reference/eviction/"),
+    ],
+    "NoSQL": [
+        ("Elasticsearch · Distributed architecture", "https://www.elastic.co/docs/deploy-manage/distributed-architecture/clusters-nodes-shards"),
+        ("MongoDB · Manual", "https://www.mongodb.com/docs/manual/"),
+    ],
+}
+
+FACT_CALIBRATIONS = {
+    "03-circuit-breaker": (
+        "以当前 Resilience4j 文档为例，关闭态既可以使用按调用次数统计的滑动窗口，也可以使用按时间统计的滑动窗口；"
+        "失败率或慢调用率都要在达到最小样本数以后才有资格触发状态切换。打开态等待结束后进入半开态时，只允许配置数量的探测调用，"
+        "其余调用继续被拒绝。这里校准的是一种具体实现：不要把课程中的“固定等一分钟”误认为熔断器唯一的恢复算法，也不要把某个版本默认值当作通用建议。"
+    ),
+}
+
 
 def yaml_string(value: str) -> str:
     return '"' + value.replace('\\', '\\\\').replace('"', '\\"') + '"'
@@ -157,8 +192,24 @@ def clean_source_walkthrough(raw: str) -> str:
 
     cleaned = "\n".join(lines)
     cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
-    cleaned = re.sub(r"([^\n。！？；：.!?])\n\n([\u4e00-\u9fff])", r"\1\2", cleaned)
-    cleaned = cleaned.strip()
+    paragraphs: list[str] = []
+    for paragraph in cleaned.split("\n\n"):
+        paragraph = paragraph.strip()
+        if not paragraph:
+            continue
+        can_join = (
+            paragraphs
+            and not paragraphs[-1].startswith("#")
+            and not paragraph.startswith(("#", "- ", "* ", "> "))
+            and not re.match(r"^\d+[.)、]", paragraph)
+            and not re.search(r"[。！？；：.!?]$", paragraphs[-1])
+            and re.match(r"^[\u4e00-\u9fff]", paragraph)
+        )
+        if can_join:
+            paragraphs[-1] += paragraph
+        else:
+            paragraphs.append(paragraph)
+    cleaned = "\n\n".join(paragraphs).strip()
     return cleaned
 
 
@@ -178,6 +229,9 @@ def build_deep_note(spec: dict) -> str:
     arc = "\n".join(f"{i}. {item}" for i, item in enumerate(spec["arc"], 1))
     first = flow[0]
     last = flow[-1]
+    refs = OFFICIAL_REFS.get(spec["id"], OFFICIAL_REFS.get(spec["chapter"], []))
+    refs_md = "\n".join(f"- [{label}]({url})" for label, url in refs)
+    calibration = FACT_CALIBRATIONS.get(spec["id"], "本课不把某个框架的默认配置当作普遍结论；具体参数需要回到目标版本官方资料和实测数据。")
 
     return f'''---
 id: {yaml_string(spec["id"])}
@@ -302,6 +356,12 @@ walkthrough_question: {yaml_string(question)}
 ## 来源与事实校准
 
 - [查看完整来源稿（本地 {pages} 页资料）](../content/{spec['id']}.md)
+
+### 当前事实校准
+
+{calibration}
+
+{refs_md}
 
 来源稿用于核对覆盖范围，不随公开站点发布。产品默认值和具体内部行为可能随版本变化；落地时应使用目标版本的官方文档、可运行实验和故障演练校准。本学习稿中的零基础入口、状态推演、故障矩阵和工程验证属于编辑补充，不冒充来源讲解者的原话。
 '''
