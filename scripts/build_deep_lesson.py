@@ -109,6 +109,33 @@ OFFICIAL_REFS = {
         ("MySQL 8.4 · Redo Log", "https://dev.mysql.com/doc/refman/8.4/en/innodb-redo-log.html"),
         ("MySQL 8.4 · Binary Log", "https://dev.mysql.com/doc/refman/8.4/en/binary-log.html"),
     ],
+    "15-data-migration": [
+        ("MySQL 8.4 · Binary Log", "https://dev.mysql.com/doc/refman/8.4/en/binary-log.html"),
+        ("Debezium · MySQL Connector", "https://debezium.io/documentation/reference/stable/connectors/mysql.html"),
+    ],
+    "16-sharding-id": [
+        ("Twitter Archive · Snowflake", "https://github.com/twitter-archive/snowflake"),
+    ],
+    "17-sharding-pagination": [
+        ("MySQL 8.4 · LIMIT Query Optimization", "https://dev.mysql.com/doc/refman/8.4/en/limit-optimization.html"),
+    ],
+    "18-distributed-transactions": [
+        ("MySQL 8.4 · XA Transactions", "https://dev.mysql.com/doc/refman/8.4/en/xa.html"),
+    ],
+    "19-sharding-secondary-query": [
+        ("Vitess · Vindexes", "https://vitess.io/docs/reference/features/vindexes/"),
+    ],
+    "20-sharding-capacity": [
+        ("Vitess · Resharding", "https://vitess.io/docs/user-guides/configuration-advanced/resharding/"),
+    ],
+    "21-database-architecture": [
+        ("MySQL 8.4 · Replication", "https://dev.mysql.com/doc/refman/8.4/en/replication.html"),
+        ("MySQL 8.4 · Group Replication", "https://dev.mysql.com/doc/refman/8.4/en/group-replication.html"),
+    ],
+    "21a-mock-database": [
+        ("MySQL 8.4 · Optimization", "https://dev.mysql.com/doc/refman/8.4/en/optimization.html"),
+        ("MySQL 8.4 · InnoDB", "https://dev.mysql.com/doc/refman/8.4/en/innodb-storage-engine.html"),
+    ],
     "数据库": [
         ("MySQL 8.4 Reference Manual", "https://dev.mysql.com/doc/refman/8.4/en/"),
         ("MySQL 8.4 · InnoDB", "https://dev.mysql.com/doc/refman/8.4/en/innodb-storage-engine.html"),
@@ -180,6 +207,36 @@ FACT_CALIBRATIONS = {
     "14-database-transactions": (
         "redo、binlog、数据页和副本确认是不同耐久边界。MySQL 返回提交成功后能承受哪些故障，取决于日志刷盘参数、存储栈和复制确认策略；"
         "不能把一次 COMMIT 泛化成跨主机、跨机房和跨备份的绝对不丢。"
+    ),
+    "15-data-migration": (
+        "全量快照与增量日志必须共享一个可解释的位点或顺序边界，否则无法证明快照期间发生的更新没有遗漏。"
+        "CDC 连接器能提供变更流，但双写原子性、业务幂等、字段语义和切流回滚仍由迁移状态机负责。"
+    ),
+    "16-sharding-id": (
+        "Snowflake 是一种把时间、节点和序列组合进整数的设计家族，不是一个自动解决时钟回拨和节点号冲突的协议。"
+        "位宽、纪元、节点分配与回拨策略必须按实现说明；趋势递增也不等于全局连续。"
+    ),
+    "17-sharding-pagination": (
+        "MySQL 的 LIMIT 优化仍需要结合 ORDER BY、索引和实际执行计划理解。跨分片游标分页要求一个稳定、唯一的全局排序边界，"
+        "通常用 `(sort_key, id)`；只携带可能重复的时间字段会产生重复或遗漏。"
+    ),
+    "18-distributed-transactions": (
+        "MySQL XA 提供两阶段式资源协调能力，但只覆盖参与 XA 的资源管理器。消息、HTTP 第三方和人工流程不因数据库 XA 自动获得原子性；"
+        "这类跨边界流程仍要用可恢复状态、幂等和补偿建模。"
+    ),
+    "19-sharding-secondary-query": (
+        "没有分片键的查询无法凭空定位唯一分片。额外映射、全局二级索引、数据冗余和搜索系统都是在写放大、读延迟、一致性窗口与运维成本之间换取路由能力。"
+    ),
+    "20-sharding-capacity": (
+        "容量规划必须同时计算当前数据量、增长率、热点倾斜、单分片安全上限和故障冗余。分片数一旦写入路由规则就会影响后续迁移成本；"
+        "虚拟分片只能降低重映射成本，不能消除真实搬迁。"
+    ),
+    "21-database-architecture": (
+        "复制、读写分离、分库分表和缓存解决的是不同瓶颈。副本读可能受复制延迟影响，分片提高横向容量却增加跨分片查询和迁移成本；"
+        "任何组合方案都要写清权威写入点、读一致性要求和故障切换边界。"
+    ),
+    "21a-mock-database": (
+        "数据库方案复盘必须从具体慢查询、锁等待、事务边界和容量证据出发。仅罗列 B+ 树、MVCC、分库分表等术语，不能证明问题定位与方案选择成立。"
     ),
 }
 
