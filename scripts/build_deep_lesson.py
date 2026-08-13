@@ -85,6 +85,10 @@ OFFICIAL_REFS = {
         ("Resilience4j · Getting Started", "https://resilience4j.readme.io/docs/getting-started"),
         ("Resilience4j · Spring Boot configuration", "https://resilience4j.readme.io/docs/getting-started-3"),
     ],
+    "09a-mock-service-governance": [
+        ("OpenTelemetry · Traces", "https://opentelemetry.io/docs/concepts/signals/traces/"),
+        ("Prometheus · Querying basics", "https://prometheus.io/docs/prometheus/latest/querying/basics/"),
+    ],
     "数据库": [
         ("MySQL 8.4 Reference Manual", "https://dev.mysql.com/doc/refman/8.4/en/"),
         ("MySQL 8.4 · InnoDB", "https://dev.mysql.com/doc/refman/8.4/en/innodb-storage-engine.html"),
@@ -132,6 +136,10 @@ FACT_CALIBRATIONS = {
     "09-service-governance": (
         "熔断、重试、限流、超时和隔离可以叠加，但执行顺序会改变统计口径、资源消耗和最终错误语义。"
         "框架注解的默认顺序属于具体实现事实；架构设计必须先明确希望谁包住谁，再用测试和指标验证。"
+    ),
+    "09a-mock-service-governance": (
+        "故障分析里的日志、指标和链路追踪是互补证据：指标说明异常从何时开始、影响多大，链路追踪定位慢或错在哪一跳，日志解释该跳内部发生了什么。"
+        "工具只能提供观测记录，根因仍需要通过时间线、对照实验和修复后的指标回落来证明。"
     ),
 }
 
