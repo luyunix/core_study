@@ -188,6 +188,27 @@ OFFICIAL_REFS = {
         ("Redis · Documentation", "https://redis.io/docs/latest/"),
         ("Redis · Key eviction", "https://redis.io/docs/latest/develop/reference/eviction/"),
     ],
+    "39-elasticsearch-ha": [
+        ("Elastic · Shard allocation, relocation, and recovery", "https://www.elastic.co/docs/deploy-manage/distributed-architecture/shard-allocation-relocation-recovery"),
+        ("Elastic · Snapshot and restore", "https://www.elastic.co/docs/deploy-manage/tools/snapshot-and-restore"),
+    ],
+    "40-elasticsearch-query": [
+        ("Elastic · Paginate search results", "https://www.elastic.co/docs/reference/elasticsearch/rest-apis/paginate-search-results"),
+        ("Elastic · Query and filter context", "https://www.elastic.co/docs/reference/query-languages/query-dsl/query-filter-context"),
+    ],
+    "41-mongodb-ha": [
+        ("MongoDB · Replica Set Read and Write Semantics", "https://www.mongodb.com/docs/manual/applications/replication/"),
+        ("MongoDB · Shards", "https://www.mongodb.com/docs/manual/core/sharded-cluster-shards/"),
+        ("MongoDB · Write Concern", "https://www.mongodb.com/docs/manual/reference/write-concern/"),
+    ],
+    "42-mongodb-performance": [
+        ("MongoDB · ESR Guideline", "https://www.mongodb.com/docs/manual/tutorial/equality-sort-range-guideline/"),
+        ("MongoDB · Compound Indexes", "https://www.mongodb.com/docs/manual/core/indexes/index-types/index-compound/"),
+    ],
+    "42a-mock-nosql": [
+        ("Elastic · Distributed architecture", "https://www.elastic.co/docs/deploy-manage/distributed-architecture/clusters-nodes-shards"),
+        ("MongoDB · Database Manual", "https://www.mongodb.com/docs/manual/"),
+    ],
     "NoSQL": [
         ("Elasticsearch · Distributed architecture", "https://www.elastic.co/docs/deploy-manage/distributed-architecture/clusters-nodes-shards"),
         ("MongoDB · Manual", "https://www.mongodb.com/docs/manual/"),
@@ -352,6 +373,26 @@ FACT_CALIBRATIONS = {
     "38a-mock-cache": (
         "缓存专题最终要通过一次全链路故障演练验收：热点键过期、Redis 不可达、本地副本陈旧和数据库变慢同时发生时，回源并发仍应受控，"
         "而权威数据、允许陈旧窗口和恢复顺序都能从指标与版本信息中解释。"
+    ),
+    "39-elasticsearch-ha": (
+        "Elasticsearch 的主分片是索引操作入口，副本既提供冗余也能服务读取；节点故障后合格副本可被提升，随后通过恢复重新建立缺失副本。"
+        "副本会同步逻辑删除和错误写入，因此不能代替快照；恢复带宽与并发也要受控，避免重建流量挤压在线搜索和写入。"
+    ),
+    "40-elasticsearch-query": (
+        "官方文档明确不应使用 from/size 做过深分页，因为每个分片需要保留当前页及之前页面的候选。超过结果窗口的顺序遍历应优先用 search_after，"
+        "需要固定索引视图时结合 PIT，并使用唯一且稳定的排序边界；过滤条件不需要相关性评分时应放入 filter context。"
+    ),
+    "41-mongodb-ha": (
+        "复制集提供同一数据集的冗余和选举，分片集群把不同数据子集放在多个分片上，而每个分片本身应部署为复制集。write concern、read concern 与 read preference 分别控制确认、可见性和读取位置，"
+        "仲裁节点只投票不保存业务数据，不能等价为数据副本，也不能替代独立备份。"
+    ),
+    "42-mongodb-performance": (
+        "MongoDB 当前官方 ESR 指南并非机械定律：等值字段通常在前；若避免内存排序最重要可选 ESR，若范围极具选择性可考虑 ERS。"
+        "复合索引前缀、分片定向路由、keysExamined、docsExamined 和阻塞排序必须用 explain 与真实分布共同验证。"
+    ),
+    "42a-mock-nosql": (
+        "Elasticsearch 与 MongoDB 都能处理文档形态数据，但一个围绕倒排检索与分片归并，一个围绕文档主存储、复制集与分片路由。"
+        "若同时使用，应明确唯一真相源、版本化同步、一致性窗口、对账和全量重建，而不是让两个系统互相直接改写。"
     ),
 }
 
