@@ -89,6 +89,26 @@ OFFICIAL_REFS = {
         ("OpenTelemetry · Traces", "https://opentelemetry.io/docs/concepts/signals/traces/"),
         ("Prometheus · Querying basics", "https://prometheus.io/docs/prometheus/latest/querying/basics/"),
     ],
+    "10-mysql-index": [
+        ("MySQL 8.4 · Multiple-Column Indexes", "https://dev.mysql.com/doc/refman/8.4/en/multiple-column-indexes.html"),
+        ("MySQL 8.4 · Clustered and Secondary Indexes", "https://dev.mysql.com/doc/refman/8.4/en/innodb-index-types.html"),
+    ],
+    "11-sql-optimization": [
+        ("MySQL 8.4 · EXPLAIN", "https://dev.mysql.com/doc/refman/8.4/en/explain.html"),
+        ("MySQL 8.4 · Optimizer Use of Generated Column Indexes", "https://dev.mysql.com/doc/refman/8.4/en/generated-column-index-optimizations.html"),
+    ],
+    "12-database-locks": [
+        ("MySQL 8.4 · InnoDB Locking", "https://dev.mysql.com/doc/refman/8.4/en/innodb-locking.html"),
+        ("MySQL 8.4 · Deadlocks", "https://dev.mysql.com/doc/refman/8.4/en/innodb-deadlocks.html"),
+    ],
+    "13-mvcc": [
+        ("MySQL 8.4 · Multi-Versioning", "https://dev.mysql.com/doc/refman/8.4/en/innodb-multi-versioning.html"),
+        ("MySQL 8.4 · Consistent Nonlocking Reads", "https://dev.mysql.com/doc/refman/8.4/en/innodb-consistent-read.html"),
+    ],
+    "14-database-transactions": [
+        ("MySQL 8.4 · Redo Log", "https://dev.mysql.com/doc/refman/8.4/en/innodb-redo-log.html"),
+        ("MySQL 8.4 · Binary Log", "https://dev.mysql.com/doc/refman/8.4/en/binary-log.html"),
+    ],
     "数据库": [
         ("MySQL 8.4 Reference Manual", "https://dev.mysql.com/doc/refman/8.4/en/"),
         ("MySQL 8.4 · InnoDB", "https://dev.mysql.com/doc/refman/8.4/en/innodb-storage-engine.html"),
@@ -140,6 +160,26 @@ FACT_CALIBRATIONS = {
     "09a-mock-service-governance": (
         "故障分析里的日志、指标和链路追踪是互补证据：指标说明异常从何时开始、影响多大，链路追踪定位慢或错在哪一跳，日志解释该跳内部发生了什么。"
         "工具只能提供观测记录，根因仍需要通过时间线、对照实验和修复后的指标回落来证明。"
+    ),
+    "10-mysql-index": (
+        "MySQL 8.4 官方文档仍明确复合索引可用于其最左前缀，但是否真正选择该索引由优化器根据代价决定。"
+        "“符合最左前缀”只表示具备索引查找能力，不等于一定零回表、一定覆盖查询或一定比全表扫描快。"
+    ),
+    "11-sql-optimization": (
+        "EXPLAIN 展示优化器计划；EXPLAIN ANALYZE 会真实执行语句，并给出迭代器的估算、实际行数、循环次数和时间。"
+        "因此生产写语句不能在不了解副作用时直接运行 ANALYZE，且一次执行计划也不能替代不同参数分布下的观测。"
+    ),
+    "12-database-locks": (
+        "InnoDB 的加锁对象与访问到的索引记录和范围有关，不应把所有 UPDATE 简化成“只锁最终返回的行”。"
+        "官方文档也要求应用处理死锁受害事务并按业务语义重试；数据库能回滚一个事务，不会替应用恢复外部副作用。"
+    ),
+    "13-mvcc": (
+        "MySQL 8.4 的一致性非锁定读会根据隔离级别选择快照；旧版本通过 undo 信息重建。"
+        "这与 SELECT FOR UPDATE 等锁定读不同。MVCC 减少普通读写互斥，但更新、删除和锁定读仍参与锁竞争。"
+    ),
+    "14-database-transactions": (
+        "redo、binlog、数据页和副本确认是不同耐久边界。MySQL 返回提交成功后能承受哪些故障，取决于日志刷盘参数、存储栈和复制确认策略；"
+        "不能把一次 COMMIT 泛化成跨主机、跨机房和跨备份的绝对不丢。"
     ),
 }
 
