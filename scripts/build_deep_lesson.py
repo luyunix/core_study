@@ -317,6 +317,7 @@ def clean_source_walkthrough(raw: str) -> str:
         if re.match(r"^[^\s]{1,24}\s*20\d{2}-\d{2}-\d{2}\s+来自", line):
             line = re.sub(r"^[^\s]{1,24}\s*20\d{2}-\d{2}-\d{2}\s+来自[^\s]+", "补充讨论：", line)
         line = re.sub(r"[]+", "", line)
+        line = re.sub(r"[\ue000-\uf8ff]", "", line)
         line = re.sub(r"^作者回复\s*:\s*", "讲解补充：", line)
         line = re.sub(r"^作者回复\s*", "讲解补充：", line)
         line = re.sub(r"^###\s+(.+)$", lambda m: "### " + HEADING_RENAMES.get(m.group(1), m.group(1)), line)
