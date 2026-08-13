@@ -64,6 +64,27 @@ OFFICIAL_REFS = {
         ("Resilience4j · CircuitBreaker", "https://resilience4j.readme.io/docs/circuitbreaker"),
         ("Resilience4j · Metrics and events", "https://resilience4j.readme.io/docs/getting-started-3"),
     ],
+    "04-degradation": [
+        ("Spring Cloud CircuitBreaker · Reference", "https://docs.spring.io/spring-cloud-circuitbreaker/reference/"),
+        ("Resilience4j · Getting Started", "https://resilience4j.readme.io/docs/getting-started"),
+    ],
+    "05-rate-limiting": [
+        ("Resilience4j · RateLimiter", "https://resilience4j.readme.io/docs/ratelimiter"),
+    ],
+    "06-isolation": [
+        ("Resilience4j · Bulkhead", "https://resilience4j.readme.io/docs/bulkhead"),
+    ],
+    "07-timeout-control": [
+        ("Resilience4j · TimeLimiter", "https://resilience4j.readme.io/docs/timeout"),
+    ],
+    "08-third-party-calls": [
+        ("Resilience4j · Retry", "https://resilience4j.readme.io/docs/retry"),
+        ("Resilience4j · TimeLimiter", "https://resilience4j.readme.io/docs/timeout"),
+    ],
+    "09-service-governance": [
+        ("Resilience4j · Getting Started", "https://resilience4j.readme.io/docs/getting-started"),
+        ("Resilience4j · Spring Boot configuration", "https://resilience4j.readme.io/docs/getting-started-3"),
+    ],
     "数据库": [
         ("MySQL 8.4 Reference Manual", "https://dev.mysql.com/doc/refman/8.4/en/"),
         ("MySQL 8.4 · InnoDB", "https://dev.mysql.com/doc/refman/8.4/en/innodb-storage-engine.html"),
@@ -87,6 +108,30 @@ FACT_CALIBRATIONS = {
         "以当前 Resilience4j 文档为例，关闭态既可以使用按调用次数统计的滑动窗口，也可以使用按时间统计的滑动窗口；"
         "失败率或慢调用率都要在达到最小样本数以后才有资格触发状态切换。打开态等待结束后进入半开态时，只允许配置数量的探测调用，"
         "其余调用继续被拒绝。这里校准的是一种具体实现：不要把课程中的“固定等一分钟”误认为熔断器唯一的恢复算法，也不要把某个版本默认值当作通用建议。"
+    ),
+    "04-degradation": (
+        "容错库可以在异常或拒绝时调用 fallback，但库无法替业务决定 fallback 的语义。读请求返回旧缓存、写请求返回“已受理”、"
+        "或者直接失败是三种不同承诺；只有业务状态机和补偿流程能说明哪一种安全。"
+    ),
+    "05-rate-limiting": (
+        "不同实现的计数方式不同。Resilience4j 当前官方实现按刷新周期发放许可，并不等同于课程中用于解释突发流量的令牌桶。"
+        "因此要区分“限流目的、理论算法、所用库的实际实现”三层，不能看到 RateLimiter 名称就假定它一定有令牌积累能力。"
+    ),
+    "06-isolation": (
+        "Resilience4j 官方区分基于信号量的并发隔离和带有界队列、固定线程池的线程池隔离。两者都只能约束进入该隔离舱的并发；"
+        "若多个隔离舱最终共享同一个已饱和数据库，底层故障域仍没有被真正切开。"
+    ),
+    "07-timeout-control": (
+        "TimeLimiter 可以对 Future 或 CompletionStage 设置等待边界，并可配置是否调用取消；但发出 cancel 不代表任意网络、数据库或业务代码都已停止。"
+        "真实系统仍需把截止时间和取消信号传给下游，并验证超时后的残留工作。"
+    ),
+    "08-third-party-calls": (
+        "Resilience4j Retry 允许按返回结果、异常类型和尝试次数决定是否重试；官方配置里的最大尝试次数包含首次调用。"
+        "这只是调用策略，不会自动赋予写操作幂等性。第三方写请求在重试前仍必须有幂等键、状态查询或补偿协议。"
+    ),
+    "09-service-governance": (
+        "熔断、重试、限流、超时和隔离可以叠加，但执行顺序会改变统计口径、资源消耗和最终错误语义。"
+        "框架注解的默认顺序属于具体实现事实；架构设计必须先明确希望谁包住谁，再用测试和指标验证。"
     ),
 }
 
