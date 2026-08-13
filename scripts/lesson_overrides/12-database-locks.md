@@ -74,6 +74,8 @@ flowchart TD
 
 数字不是装饰。它迫使我们回答容量、顺序、时间窗口或版本选择问题。若换一个数字就得出不同结论，真正的设计依据就是那个阈值，而不是某个中间件名称。
 
+
+
 ## 按讲解顺序重建知识链：完整来源讲解
 
 下面按来源资料的教学顺序重新编排完整内容。转换页码、来源图片、推广信息、水印和个人宣传已经删除；原本围绕求职问答的角色与措辞改写为工程学习、方案评审和故障复盘语境。机制、算法、例子、反例、事故线索、评论补充和限制条件仍然保留。这里的作用是补齐知识覆盖，不取代前面的独立推演。
@@ -96,7 +98,7 @@ flowchart TD
 
 如果查询条件的值并不存在，例如：
 
-复制代码1 SELECT * FROM your_tab WHERE id = 15 FOR UPDATE
+复制代码1 SELECT * FROM your_tab WHERE id = 15 FOR UPDATE
 
 id = 15 的值根本不存在，那么怎么锁？InnoDB 引擎会利用最接近 15 的相邻的两个节点，构造一个临键锁。
 
@@ -104,7 +106,7 @@ id = 15 的值根本不存在，那么怎么锁？InnoDB 引擎会利用最接�
 
 那么范围查询呢？也是利用索引上的数据，构造一个恰好能够装下这个范围的临键锁。例如：
 
-复制代码1 SELECT * FROM your_tab WHERE id > 33 FOR UPDATE
+复制代码1 SELECT * FROM your_tab WHERE id > 33 FOR UPDATE
 
 InnoDB 引擎会构造一个 (33，supremum] 的临键锁，锁住整个范围。supremum 你可以直观理解为 MySQL 认为的一个虚拟的最大值。
 
@@ -122,13 +124,13 @@ InnoDB 引擎会构造一个 (33，supremum] 的临键锁，锁住整个范围�
 
 乐观锁在数据库中通常指利用 CAS 的思路进行的更新操作。一般的使用形态就是下面这样的。
 
-复制代码1 SELECT * FROM your_tab WHERE id = 1; // 在这里拿到了 a = 1 2 // 一大堆的业务操作3 UPDATE your_tab SET a = 3, b = 4 WHERE id = 1 AND a =1
+复制代码1 SELECT * FROM your_tab WHERE id = 1; // 在这里拿到了 a = 1 2 // 一大堆的业务操作3 UPDATE your_tab SET a = 3, b = 4 WHERE id = 1 AND a =1
 
 在上面的这个语句里面，预期数据库中 a 的值为 1 才会进行更新。如果此时数据库中的值已经被修改了，那么这个 UPDATE 语句就会失败。业务方通过检测受影响的行数是否为 0，来判断更新是否成功。
 
 悲观锁是指在写入数据时直接加锁。还拿上面这个例子来说吧，就是从最开始的 SELECT 语句就直接加上了锁。
 
-复制代码1 SELECT * FROM your_tab WHERE id = 1 FOR UPDATE; // 在这里拿到了 a = 1 2 // 一大堆的业务操作3 UPDATE your_tab SET a = 3, b = 4 WHERE id = 1
+复制代码1 SELECT * FROM your_tab WHERE id = 1 FOR UPDATE; // 在这里拿到了 a = 1 2 // 一大堆的业务操作3 UPDATE your_tab SET a = 3, b = 4 WHERE id = 1
 
 在加上锁之后，就可以直接更新了。这个时候不需要担心别人可以在 SELECT 和 UPDATE 之间将 a 更新为别的值。
 
@@ -170,13 +172,13 @@ InnoDB 引擎会构造一个 (33，supremum] 的临键锁，锁住整个范围�
 
 记录锁是指锁住了特定的某一条记录的锁。例如这样一条语句：
 
-复制代码1 SELECT * FROM your_tab WHERE id = 31 FOR UPDATE
+复制代码1 SELECT * FROM your_tab WHERE id = 31 FOR UPDATE
 
 在你使用了主键作为查询条件，并且是相等条件下，将只命中一条记录。这一条记录就会被加上记录锁。
 
 但是如果查询条件没有命中任何记录，那么就不会使用记录锁，而是使用间隙锁。又或者你使用了唯一索引作为条件，比如说在 user 表里面在列 email 上有一个唯一索引。
 
-复制代码1 SELECT * FROM your_tab WHERE email='your_email' FOR UPDATE
+复制代码1 SELECT * FROM your_tab WHERE email='your_email' FOR UPDATE
 
 那么这条查询语句此时也是使用了记录锁。类似地，如果 email=‘your_email’ 这条记录不存在，那么会变成一个间隙锁。
 
@@ -188,7 +190,7 @@ InnoDB 引擎会构造一个 (33，supremum] 的临键锁，锁住整个范围�
 
 间隙锁是锁住了某一段记录的锁。直观来说就是你锁住了一个范围的记录。比如说你在查询的时候使用了 <、<=、BETWEEN 之类的范围查询条件，就会使用间隙锁。
 
-复制代码1 SELECT * FROM your_tab WHERE id BETWEEN 50 AND 100 FOR UPDATE
+复制代码1 SELECT * FROM your_tab WHERE id BETWEEN 50 AND 100 FOR UPDATE
 
 间隙锁会锁住 (50，100) 之间的数据，而 50 和 100 本身会被记录锁锁住。类似地，<= 这种查询你也可以认为 = 的那个值会被记录锁锁住。
 
@@ -276,13 +278,13 @@ MySQL 里面的锁机制特别丰富，这里我以 InnoDB 引擎为例。首先
 
 只看没有数据的逻辑，在计算之后插入新数据，如果用伪代码来描述，就是下面这样的。
 
-复制代码1 BEGIN;2 SELECT * FROM biz WHERE id = ? FOR UPDATE 3 // 中间有很多业务操作4 INSERT INTO biz(id, data) VALUE(?, ?);5 COMMIT;
+复制代码1 BEGIN;2 SELECT * FROM biz WHERE id = ? FOR UPDATE 3 // 中间有很多业务操作4 INSERT INTO biz(id, data) VALUE(?, ?);5 COMMIT;
 
 看起来是不是没有任何问题？实际上，这个地方会引起死锁。
 
 假设说现在数据库中 ID 最大的值是 78。那么如果两个业务进来，同时执行这个逻辑。一个准备插入 id=79 的数据，一个准备插入 id = 80 的数据。如果它们的执行时序如下图，那么你就会得到一个死锁错误。
 
-复制代码1 [40001][1213] Deadlock found when trying to get lock; try restarting transaction
+复制代码1 [40001][1213] Deadlock found when trying to get lock; try restarting transaction
 
 造成死锁的原因也很简单。在线程 1 执行 SELECT FOR UPDATE 的时候，因为 id=79 的数据不存在，所以实际上数据库会产生一个 (78，supremum] 的临键锁。类似地，线程 2 也会产生一个 (78，supremum] 临键锁。
 
@@ -310,11 +312,11 @@ MySQL 里面的锁机制特别丰富，这里我以 InnoDB 引擎为例。首先
 
 伪代码：
 
-复制代码1 // 开启事务2 Begin()3 // 查询到已有的数据 SELECT * FROM xxx WHERE id = 1 FOR UPDATE 4 data := SelectForUpdate(id)5 newData := calculate(data) // 一大通计算6 7 // 将新数据写回去数据库 UPDATE xxx SET data = newData WHERE id =1 8 Update(id, newData)9 Commit()
+复制代码1 // 开启事务2 Begin()3 // 查询到已有的数据 SELECT * FROM xxx WHERE id = 1 FOR UPDATE 4 data := SelectForUpdate(id)5 newData := calculate(data) // 一大通计算6 7 // 将新数据写回去数据库 UPDATE xxx SET data = newData WHERE id =1 8 Update(id, newData)9 Commit()
 
 那么这一类代码可以考虑将整个事务都去掉，纯粹依赖 CAS 操作。
 
-1 for { 复制代码2// 查询到已有的数据 SELECT * FROM xxx WHERE id = 1 3 data := Select(id)4 newData := calculate(data) // 一大通计算5 6// 将新数据写回去数据库7// UPDATE xxx SET data = newData WHERE id =1 AND data=oldData 8 success := CAS(id, newData, data)9// 确实更新成功，代表在业务执行过程中没有人修改过这个 data。10// 适合读多写少的情况11 if success {12 break;13}14}
+1 for { 复制代码2// 查询到已有的数据 SELECT * FROM xxx WHERE id = 1 3 data := Select(id)4 newData := calculate(data) // 一大通计算5 6// 将新数据写回去数据库7// UPDATE xxx SET data = newData WHERE id =1 AND data=oldData 8 success := CAS(id, newData, data)9// 确实更新成功，代表在业务执行过程中没有人修改过这个 data。10// 适合读多写少的情况11 if success {12 break;13}14}
 
 这里我是直接用的 data 来比较的，实践中也可能是引入了 version 列，或者使用update_time 来确保数据没有发生变更。
 

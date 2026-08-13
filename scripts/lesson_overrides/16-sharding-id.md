@@ -74,6 +74,8 @@ flowchart TD
 
 数字不是装饰。它迫使我们回答容量、顺序、时间窗口或版本选择问题。若换一个数字就得出不同结论，真正的设计依据就是那个阈值，而不是某个中间件名称。
 
+
+
 ## 按讲解顺序重建知识链：完整来源讲解
 
 下面按来源资料的教学顺序重新编排完整内容。转换页码、来源图片、推广信息、水印和个人宣传已经删除；原本围绕求职问答的角色与措辞改写为工程学习、方案评审和故障复盘语境。机制、算法、例子、反例、事故线索、评论补充和限制条件仍然保留。这里的作用是补齐知识覆盖，不取代前面的独立推演。
@@ -94,7 +96,7 @@ flowchart TD
 
 比如说我们在 MySQL 里面的建表语句，指定了 AUTO_INCREMENT。
 
-复制代码1 CREATE TABLE order (2 id BIGINT PRIMARY KEY AUTO_INCREMENT,3 buyer_id BIGINT NOT NULL 4 )
+复制代码1 CREATE TABLE order (2 id BIGINT PRIMARY KEY AUTO_INCREMENT,3 buyer_id BIGINT NOT NULL 4 )
 
 那么在分库分表的场景下，这种自增主键就无法运作了，因为存在冲突的可能。举个最简单的例子，假如说我们分库分表只分表，而且按照 buyer_id 除以 2 的余数来分成两张表，分别是order_tab_0 和 order_tab_1。
 

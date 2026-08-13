@@ -63,6 +63,10 @@ def main() -> None:
         for phrase in BANNED:
             if phrase.casefold() in text.casefold():
                 errors.append(f"{path.name}: 含禁用来源痕迹 {phrase}")
+        if re.search(r"[\ue000-\uf8ff]", text):
+            errors.append(f"{path.name}: 含 PDF 私有区图标字符")
+        if re.search(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", text):
+            errors.append(f"{path.name}: 含不可见控制字符")
         if title in titles:
             errors.append(f"{path.name}: 标题重复 {title}")
         titles.add(title)

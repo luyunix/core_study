@@ -74,6 +74,8 @@ flowchart TD
 
 数字不是装饰。它迫使我们回答容量、顺序、时间窗口或版本选择问题。若换一个数字就得出不同结论，真正的设计依据就是那个阈值，而不是某个中间件名称。
 
+
+
 ## 按讲解顺序重建知识链：完整来源讲解
 
 下面按来源资料的教学顺序重新编排完整内容。转换页码、来源图片、推广信息、水印和个人宣传已经删除；原本围绕求职问答的角色与措辞改写为工程学习、方案评审和故障复盘语境。机制、算法、例子、反例、事故线索、评论补充和限制条件仍然保留。这里的作用是补齐知识覆盖，不取代前面的独立推演。
@@ -142,7 +144,7 @@ Sidecar 目前还没有成熟的产品，但是从架构上来说它的性能应
 
 从理论上来说，我们的分页查询要在全局有序的情况下进行。但是在分库分表之后，要想做到“全局有序”就非常难了。假如说我们的数据库 order_tab 是以 buyer_id 除以 2 的余数（%2） 来进行分表的，如果你要执行一个语句。
 
-复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 4 OFFSET 2
+复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 4 OFFSET 2
 
 那么实际执行查询的时候，就要考虑各种数据的分布情况。
 
@@ -154,13 +156,13 @@ Sidecar 目前还没有成熟的产品，但是从架构上来说它的性能应
 
 所以在分库分表里面，这样一个 SELECT 语句生成的目标语句是这样的：
 
-复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 6 OFFSET 0
+复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 6 OFFSET 0
 
 2 SELECT * FROM order_tab ORDER BY id LIMIT 6 OFFSET 0
 
 注意看 LIMIT 部分，被修改成了 0、6。用更加通用的形式来描述，就是如果一个分页语句是LIMIT x OFFSET y 的形式，那么最终生成的目标语句就是 LIMIT x + y OFFSET 0。
 
-复制代码1 LIMIT x OFFSET y => LIMIT x+y OFFSET 0
+复制代码1 LIMIT x OFFSET y => LIMIT x+y OFFSET 0
 
 当分库分表中间件拿到这两个语句的查询结果之后，就要在内存中进行排序，再找出全局的LIMIT 4 OFFSET 2。
 
@@ -188,11 +190,11 @@ Sidecar 目前还没有成熟的产品，但是从架构上来说它的性能应
 
 例如，查询中的语句是这样的：
 
-复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 4 OFFSET 2
+复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 4 OFFSET 2
 
 因为本身只有两张表，那么我可以改写成这样：
 
-复制代码1 SELECT * FROM order_tab_0 ORDER BY id LIMIT 2 OFFSET 1 2 SELECT * FROM order_tab_1 ORDER BY id LIMIT 2 OFFSET 1
+复制代码1 SELECT * FROM order_tab_0 ORDER BY id LIMIT 2 OFFSET 1 2 SELECT * FROM order_tab_1 ORDER BY id LIMIT 2 OFFSET 1
 
 也就是说，我在每一张表都查询从偏移量 1 开始的 2 条数据，那么合并在一起就可以认为是从全局的偏移量 2 开始的 4 条数据。
 
@@ -206,13 +208,13 @@ Sidecar 目前还没有成熟的产品，但是从架构上来说它的性能应
 
 这个方案还有一个进阶版本，就是根据数据分布来决定如何取数据。假如说你预计你查询的数据有 70% 在 order_tab_0，有 30% 在 order_tab_1，然后你假设逻辑上的查询是：
 
-复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 10 OFFSET 100
+复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 10 OFFSET 100
 
 那么你可以根据数据分布，从 order_tab_0 取 70% 的数据，然后在 order_tab_1 取 30% 数据，偏移量也是如此。
 
 因此目标 SQL 就是：
 
-复制代码1 SELECT * FROM order_tab_0 ORDER BY id LIMIT 7 OFFSET 70 2 SELECT * FROM order_tab_1 ORDER BY id LIMIT 3 OFFSET 30
+复制代码1 SELECT * FROM order_tab_0 ORDER BY id LIMIT 7 OFFSET 70 2 SELECT * FROM order_tab_1 ORDER BY id LIMIT 3 OFFSET 30
 
 这个进阶版本你可以在前面的基本解释之后进一步补充。
 
@@ -228,19 +230,19 @@ Sidecar 目前还没有成熟的产品，但是从架构上来说它的性能应
 
 禁用跨页查询，意思就是要求用户只能从第 0 页开始，逐页往后翻，不允许跨页。比如说从第 3 页跳到第 10 页，这种是不允许的。假如说业务上分页查询是 50 条数据一页。那么发起的查询依次是：
 
-复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 50 OFFSET 0 2 SELECT * FROM order_tab ORDER BY id LIMIT 50 OFFSET 50 3 SELECT * FROM order_tab ORDER BY id LIMIT 50 OFFSET 100 4 ...
+复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 50 OFFSET 0 2 SELECT * FROM order_tab ORDER BY id LIMIT 50 OFFSET 50 3 SELECT * FROM order_tab ORDER BY id LIMIT 50 OFFSET 100 4 ...
 
 所以由此可以看到，这里不断增长的只有偏移量。那么有没有办法控制住这个偏移量呢？
 
 答案就是根据 ORDER BY 的部分来增加一个查询条件。在上面的例子里，ORDER BY id 是按照 id 升序排序的，那么只需要在 WHERE 部分增加一个大于上次查询的最大 id 的条件就可以了。
 
-复制代码1 SELECT * FROM order_tab WHERE `id` > max_id ORDER BY id LIMIT 50 OFFSET 0
+复制代码1 SELECT * FROM order_tab WHERE `id` > max_id ORDER BY id LIMIT 50 OFFSET 0
 
 max_id 就是你上一批次的最大 id。
 
 反过来，如果 ORDER BY 是降序的，比如 ORDER BY id DESC，那么对应的 SQL 就变成这样：
 
-复制代码1 SELECT * FROM order_tab WHERE `id` < min_id ORDER BY id LIMIT 50 OFFSET 0
+复制代码1 SELECT * FROM order_tab WHERE `id` < min_id ORDER BY id LIMIT 50 OFFSET 0
 
 min_id 就是上一批次里最小的 id。
 
@@ -274,7 +276,7 @@ min_id 就是上一批次里最小的 id。
 
 假设说我们的查询依旧是：
 
-复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 4 OFFSET 4
+复制代码1 SELECT * FROM order_tab ORDER BY id LIMIT 4 OFFSET 4
 
 数据分布如图所示：
 
@@ -284,7 +286,7 @@ min_id 就是上一批次里最小的 id。
 
 我们把 SQL 语句改写成这样：
 
-复制代码1 SELECT * FROM order_tab_0 ORDER BY id LIMIT 4 OFFSET 2 2 SELECT * FROM order_tab_1 ORDER BY id LIMIT 4 OFFSET 2
+复制代码1 SELECT * FROM order_tab_0 ORDER BY id LIMIT 4 OFFSET 2 2 SELECT * FROM order_tab_1 ORDER BY id LIMIT 4 OFFSET 2
 
 注意，这里我们只是把 OFFSET 平均分配了，但是 LIMIT 没变。
 
@@ -300,7 +302,7 @@ order_tab_0 拿到了 4、6、10、12，而 order_tab_1 拿到了 7、8、9、11
 
 这一次查询需要利用上一步找出来的最小值以及各自分库的最大值来构造 BETWEEN 查询。改写得到的 SQL 是：
 
-复制代码1 SELECT * FROM order_tab_0 WHERE id BETWEEN 4 AND 12 2 SELECT * FROM order_tab_1 WHERE id BETWEEN 4 AND 11
+复制代码1 SELECT * FROM order_tab_0 WHERE id BETWEEN 4 AND 12 2 SELECT * FROM order_tab_1 WHERE id BETWEEN 4 AND 11
 
 结果：
 

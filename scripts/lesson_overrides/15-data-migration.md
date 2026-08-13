@@ -74,6 +74,8 @@ flowchart TD
 
 数字不是装饰。它迫使我们回答容量、顺序、时间窗口或版本选择问题。若换一个数字就得出不同结论，真正的设计依据就是那个阈值，而不是某个中间件名称。
 
+
+
 ## 按讲解顺序重建知识链：完整来源讲解
 
 下面按来源资料的教学顺序重新编排完整内容。转换页码、来源图片、推广信息、水印和个人宣传已经删除；原本围绕求职问答的角色与措辞改写为工程学习、方案评审和故障复盘语境。机制、算法、例子、反例、事故线索、评论补充和限制条件仍然保留。这里的作用是补齐知识覆盖，不取代前面的独立推演。
@@ -181,7 +183,7 @@ AOP（Aspect Oriented Program 面向切面编程）方案：不同框架有不�
 
 我这里给你看一个伪代码，让你有一个直观的认知。
 
-复制代码1 func (m *DouleWritePool) QueryContext(ctx context.Context, query string, args ...2 if m.mode == '源表优先' {3 err = m.source.QueryContext(ctx, query, args...)4 if err == nil {5 m.target.QueryContext(ctx, query, args...)6 }7 } else if {8 //...9 }10 }
+复制代码1 func (m *DouleWritePool) QueryContext(ctx context.Context, query string, args ...2 if m.mode == '源表优先' {3 err = m.source.QueryContext(ctx, query, args...)4 if err == nil {5 m.target.QueryContext(ctx, query, args...)6 }7 } else if {8 //...9 }10 }
 
 很多时候，你在简历里面写上自己精通某个框架，但是都缺乏说服力，那么这个就可以作为一个证明。在双写的时候，你可以往两个方向进一步刷进阶推导：数据一致性问题和主键问题。
 
@@ -217,7 +219,7 @@ AOP（Aspect Oriented Program 面向切面编程）方案：不同框架有不�
 
 利用更新时间戳的思路很简单，就是定时查询每一张表，然后根据更新时间戳来判断某一行数据有没有发生变化。我们用伪代码来描述一下。
 
-复制代码1 for {2 // 执行查询3 // SELECT * FROM xx WHERE update_time >= last_time 4 rows := findUpdatedRows()5 for row in rows {6 // 找到目标行，要用主键来找，用唯一索引也可以，看你支持到什么程度7 tgtRow = findTgt(row.id)8 if row != tgtRow {9 // 修复数据10 fix()11 }12 }13 // 用这一批数据里面最大的更新时间戳作为下一次的起始时间戳14 last_time = maxUpdateTime(row)15 // 睡眠一下16 sleep(1s)17 }
+复制代码1 for {2 // 执行查询3 // SELECT * FROM xx WHERE update_time >= last_time 4 rows := findUpdatedRows()5 for row in rows {6 // 找到目标行，要用主键来找，用唯一索引也可以，看你支持到什么程度7 tgtRow = findTgt(row.id)8 if row != tgtRow {9 // 修复数据10 fix()11 }12 }13 // 用这一批数据里面最大的更新时间戳作为下一次的起始时间戳14 last_time = maxUpdateTime(row)15 // 睡眠一下16 sleep(1s)17 }
 
 所以你可以介绍基本的策略，关键词是更新时间戳。
 
