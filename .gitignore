@@ -1,0 +1,13 @@
+node_modules/
+dist/
+tmp/
+.idea/
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+.DS_Store
+__pycache__/
+*.pyc
+
+# Complete converted source material stays local and is never published.
+content/

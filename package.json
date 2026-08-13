@@ -1,0 +1,30 @@
+{
+  "name": "core-study",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "learning:build": "python3 scripts/build_learning_notes.py",
+    "audit": "python3 scripts/audit_content.py && python3 scripts/audit_learning_content.py",
+    "audit:learning": "python3 scripts/audit_learning_content.py"
+  },
+  "dependencies": {
+    "lucide-react": "^0.468.0",
+    "marked": "^15.0.4",
+    "mermaid": "^11.16.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@rollup/rollup-darwin-x64": "4.62.4",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  }
+}
