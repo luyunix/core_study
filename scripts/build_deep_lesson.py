@@ -136,6 +136,10 @@ OFFICIAL_REFS = {
         ("MySQL 8.4 · Optimization", "https://dev.mysql.com/doc/refman/8.4/en/optimization.html"),
         ("MySQL 8.4 · InnoDB", "https://dev.mysql.com/doc/refman/8.4/en/innodb-storage-engine.html"),
     ],
+    "消息队列": [
+        ("Apache Kafka · Introduction", "https://kafka.apache.org/documentation/"),
+        ("Apache Kafka · Design", "https://kafka.apache.org/41/design/design/"),
+    ],
     "数据库": [
         ("MySQL 8.4 Reference Manual", "https://dev.mysql.com/doc/refman/8.4/en/"),
         ("MySQL 8.4 · InnoDB", "https://dev.mysql.com/doc/refman/8.4/en/innodb-storage-engine.html"),
@@ -237,6 +241,45 @@ FACT_CALIBRATIONS = {
     ),
     "21a-mock-database": (
         "数据库方案复盘必须从具体慢查询、锁等待、事务边界和容量证据出发。仅罗列 B+ 树、MVCC、分库分表等术语，不能证明问题定位与方案选择成立。"
+    ),
+    "22-message-queue": (
+        "消息队列能解耦生产与消费时间，但不能自动保证业务成功。生产确认、Broker 耐久、消费处理、offset 提交和下游副作用是不同边界；"
+        "必须按业务选择至多一次、至少一次或受限范围的精确一次处理。"
+    ),
+    "23-delayed-messages": (
+        "Kafka 的基础抽象是按分区追加的日志，不原生承诺任意时刻触发每一条消息。利用分区、时间轮、延迟主题或外部存储实现延迟调度时，"
+        "都要定义精度、扫描成本、重启恢复、重复触发和热点时间段。"
+    ),
+    "24-message-ordering": (
+        "Kafka 的顺序保证首先落在单个 topic partition 内；业务键需要稳定映射到同一分区。扩分区、重试、并发处理和异步回调都会改变观察到的业务顺序，"
+        "所以还要用版本号、串行执行或幂等状态机保护。"
+    ),
+    "25-message-backlog": (
+        "积压是生产速率长期高于有效消费速率的结果。增加消费者只有在可用分区和下游容量允许时才有用；若瓶颈是数据库写入或外部接口，"
+        "盲目加消费者只会把积压从 Kafka 搬到下游连接池。"
+    ),
+    "26-message-durability": (
+        "`acks=all` 指等待当前 ISR 中的副本确认，并不字面等于所有配置副本都已写入。它需要与 replication factor、min.insync.replicas 和 leader election 策略共同解释；"
+        "生产者收到成功后仍要明确可以容忍的多故障组合。"
+    ),
+    "27-duplicate-consumption": (
+        "至少一次处理允许重投。Kafka 的幂等生产者解决的是生产者到特定分区的重复写入问题，事务可以原子提交 Kafka 输出和消费位点；"
+        "写数据库、调用 HTTP 等外部副作用仍需要业务幂等键、唯一约束或状态表配合。"
+    ),
+    "28-design-a-message-queue": (
+        "设计消息队列必须同时定义追加日志、分区路由、复制提交、消费位点、保留清理和故障选主。只画生产者—Broker—消费者三块，无法说明消息在崩溃和重试后是否仍可恢复。"
+    ),
+    "29-kafka-performance": (
+        "Kafka 的性能来自批量、顺序追加、页缓存、压缩和分区并行的组合，而不是“零拷贝”一个词。批量会增加等待和内存，分区会增加元数据与重平衡成本，"
+        "每个优化都必须用吞吐、端到端延迟和故障恢复时间共同衡量。"
+    ),
+    "30-kafka-practice": (
+        "高性能与高可靠不是两套互不相关的开关。acks、批量、压缩、分区、复制、消费并发和 offset 提交共同决定吞吐、延迟、重复与丢失窗口；"
+        "要在同一压测和故障演练中验证。"
+    ),
+    "30a-mock-message-queue": (
+        "消息专题复盘要能沿一条消息从业务事务、生产发送、Broker 复制、消费处理到下游副作用画出完整时间线，并在任意边界注入崩溃；"
+        "只背 Kafka 参数不能证明端到端语义。"
     ),
 }
 
