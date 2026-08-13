@@ -148,6 +148,42 @@ OFFICIAL_REFS = {
         ("Apache Kafka · Documentation", "https://kafka.apache.org/documentation/"),
         ("Apache Kafka · Design", "https://kafka.apache.org/25/design/design/"),
     ],
+    "31-redis-expiration": [
+        ("Redis · EXPIRE and expiration internals", "https://redis.io/docs/latest/commands/expire/"),
+        ("Redis · Diagnosing latency issues", "https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/"),
+    ],
+    "32-cache-eviction": [
+        ("Redis · Key eviction", "https://redis.io/docs/latest/develop/reference/eviction/"),
+        ("Redis · Memory optimization", "https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/memory-optimization/"),
+    ],
+    "33-cache-patterns": [
+        ("Redis · Client-side caching", "https://redis.io/docs/latest/develop/clients/client-side-caching/"),
+        ("Redis · Keyspace notifications", "https://redis.io/docs/latest/develop/pubsub/keyspace-notifications/"),
+    ],
+    "34-cache-consistency": [
+        ("Redis · Client-side caching", "https://redis.io/docs/latest/develop/clients/client-side-caching/"),
+        ("Redis · Transactions", "https://redis.io/docs/latest/develop/using-commands/transactions/"),
+    ],
+    "35-cache-failures": [
+        ("Redis · Key eviction", "https://redis.io/docs/latest/develop/reference/eviction/"),
+        ("Redis · Redis pipelining", "https://redis.io/docs/latest/develop/using-commands/pipelining/"),
+    ],
+    "36-redis-single-thread": [
+        ("Redis · Diagnosing latency issues", "https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency/"),
+        ("Redis · Latency monitoring", "https://redis.io/docs/latest/operate/oss_and_stack/management/optimization/latency-monitor/"),
+    ],
+    "37-redis-distributed-lock": [
+        ("Redis · Distributed Locks", "https://redis.io/docs/latest/develop/clients/patterns/distributed-locks/"),
+        ("Redis · SET command", "https://redis.io/docs/latest/commands/set/"),
+    ],
+    "38-cache-architecture": [
+        ("Redis · Client-side caching", "https://redis.io/docs/latest/develop/clients/client-side-caching/"),
+        ("Redis · High availability with Sentinel", "https://redis.io/docs/latest/operate/oss_and_stack/management/sentinel/"),
+    ],
+    "38a-mock-cache": [
+        ("Redis · Documentation", "https://redis.io/docs/latest/"),
+        ("Redis · Key eviction", "https://redis.io/docs/latest/develop/reference/eviction/"),
+    ],
     "缓存": [
         ("Redis · Documentation", "https://redis.io/docs/latest/"),
         ("Redis · Key eviction", "https://redis.io/docs/latest/develop/reference/eviction/"),
@@ -280,6 +316,42 @@ FACT_CALIBRATIONS = {
     "30a-mock-message-queue": (
         "消息专题复盘要能沿一条消息从业务事务、生产发送、Broker 复制、消费处理到下游副作用画出完整时间线，并在任意边界注入崩溃；"
         "只背 Kafka 参数不能证明端到端语义。"
+    ),
+    "31-redis-expiration": (
+        "Redis 官方文档把键过期分成访问时的被动过期与后台主动抽样。TTL 到点后键在语义上已不可读，但物理删除、内存分配器复用以及 RSS 回落不是同一瞬间；"
+        "过期机制也不是精确定时任务队列，业务动作不能只靠键空间通知触发。"
+    ),
+    "32-cache-eviction": (
+        "达到 maxmemory 后，Redis 会按 maxmemory-policy 决定淘汰或拒绝会增加内存的命令。LRU/LFU 属于近似选择，并且 volatile 系列只在带 TTL 的键中选候选；"
+        "因此策略名称不能替代候选集合、对象大小和业务可丢失性的检查。"
+    ),
+    "33-cache-patterns": (
+        "Cache-Aside、Read-Through、Write-Through 与 Write-Behind 首先区别在谁负责读写真相源、何时确认成功。Redis 的客户端缓存和失效通知可以帮助减少远程读取，"
+        "但通知链路、断线重连和本地副本过期仍必须纳入一致性边界。"
+    ),
+    "34-cache-consistency": (
+        "数据库提交与缓存删除通常不是一个原子事务。先写库再删缓存可以缩小常见窗口，却不能凭口号获得强一致；延迟双删、版本号、CDC 失效与短 TTL 都是在不同成本下促进最终收敛，"
+        "关键数据仍应从权威存储或版本化状态机判断。"
+    ),
+    "35-cache-failures": (
+        "穿透、热点失效与大量键同时失效会把压力以不同形态传给真相源。布隆过滤器、空值、请求合并、TTL 抖动、限流和旧值服务各有误判、新鲜度或可用性代价；"
+        "治理目标应写成数据库最大可承受回源并发，而不只是缓存命中率。"
+    ),
+    "36-redis-single-thread": (
+        "Redis 官方把命令执行描述为 mostly single-threaded，同时明确后台 I/O、持久化等工作可能使用其他线程或进程。单条慢命令会阻塞其他客户端，"
+        "所以应关注命令复杂度、网络往返、fork、swap、持久化与内存过期造成的尾延迟，而不是把“单线程”直接等同于慢或绝对无并发。"
+    ),
+    "37-redis-distributed-lock": (
+        "单实例锁应使用带唯一令牌和 TTL 的条件写入，并且只允许持有同一令牌的客户端释放。TTL 只是有期限的租约：执行超时或停顿后，旧持有者仍可能继续操作，"
+        "需要下游接受 fencing token 或条件版本。异步复制切主也可能破坏单实例互斥，锁的故障模型必须显式说明。"
+    ),
+    "38-cache-architecture": (
+        "多级缓存会增加独立副本和失效路径。Sentinel 或 Cluster 能改善 Redis 节点故障恢复，却不会自动保证本地缓存、数据库和远程缓存的一致性；"
+        "设计必须同时给出每层新鲜度、故障半径、回源上限、版本/失效协议和绕过缓存时的数据库保护。"
+    ),
+    "38a-mock-cache": (
+        "缓存专题最终要通过一次全链路故障演练验收：热点键过期、Redis 不可达、本地副本陈旧和数据库变慢同时发生时，回源并发仍应受控，"
+        "而权威数据、允许陈旧窗口和恢复顺序都能从指标与版本信息中解释。"
     ),
 }
 
