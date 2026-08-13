@@ -170,6 +170,7 @@ def source_body(lesson_id: str) -> tuple[int, str]:
 def clean_source_walkthrough(raw: str) -> str:
     """Keep teaching substance in order while deleting conversion artifacts."""
 
+    raw = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", raw)
     lines: list[str] = []
     skip_editorial_bridge = False
     for original in raw.splitlines():
@@ -236,25 +237,7 @@ def clean_source_walkthrough(raw: str) -> str:
             lines.append(line)
 
     cleaned = "\n".join(lines)
-    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
-    paragraphs: list[str] = []
-    for paragraph in cleaned.split("\n\n"):
-        paragraph = paragraph.strip()
-        if not paragraph:
-            continue
-        can_join = (
-            paragraphs
-            and not paragraphs[-1].startswith("#")
-            and not paragraph.startswith(("#", "- ", "* ", "> "))
-            and not re.match(r"^\d+[.)、]", paragraph)
-            and not re.search(r"[。！？；：.!?]$", paragraphs[-1])
-            and re.match(r"^[\u4e00-\u9fff]", paragraph)
-        )
-        if can_join:
-            paragraphs[-1] += paragraph
-        else:
-            paragraphs.append(paragraph)
-    cleaned = "\n\n".join(paragraphs).strip()
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned).strip()
     return cleaned
 
 
